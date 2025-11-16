@@ -189,22 +189,22 @@ function M.issues(opts)
           opts.results_title = opts.results_title or ""
 
           pickers
-            .new(opts, {
-              finder = finders.new_table {
-                results = issues,
-                entry_maker = entry_maker.gen_from_issue(max_number),
-              },
-              sorter = conf.generic_sorter(opts),
-              previewer = previewers.issue.new(opts),
-              attach_mappings = function(_, map)
-                action_set.select:replace(replace)
-                map("i", cfg.picker_config.mappings.open_in_browser.lhs, open_in_browser())
-                map("i", cfg.picker_config.mappings.copy_url.lhs, copy_url())
-                map("i", cfg.picker_config.mappings.copy_sha.lhs, copy_sha())
-                return true
-              end,
-            })
-            :find()
+              .new(opts, {
+                finder = finders.new_table {
+                  results = issues,
+                  entry_maker = entry_maker.gen_from_issue(max_number),
+                },
+                sorter = conf.generic_sorter(opts),
+                previewer = previewers.issue.new(opts),
+                attach_mappings = function(_, map)
+                  action_set.select:replace(replace)
+                  map("i", cfg.picker_config.mappings.open_in_browser.lhs, open_in_browser())
+                  map("i", cfg.picker_config.mappings.copy_url.lhs, copy_url())
+                  map("i", cfg.picker_config.mappings.copy_sha.lhs, copy_sha())
+                  return true
+                end,
+              })
+              :find()
         end
       end,
     },
@@ -258,19 +258,19 @@ function M.gists(opts)
           opts.prompt_title = opts.prompt_title or ""
           opts.results_title = opts.results_title or ""
           pickers
-            .new(opts, {
-              finder = finders.new_table {
-                results = gists,
-                entry_maker = entry_maker.gen_from_gist(),
-              },
-              previewer = previewers.gist.new(opts),
-              sorter = conf.generic_sorter(opts),
-              attach_mappings = function(_, map)
-                map("i", "<CR>", open_gist)
-                return true
-              end,
-            })
-            :find()
+              .new(opts, {
+                finder = finders.new_table {
+                  results = gists,
+                  entry_maker = entry_maker.gen_from_gist(),
+                },
+                previewer = previewers.gist.new(opts),
+                sorter = conf.generic_sorter(opts),
+                attach_mappings = function(_, map)
+                  map("i", "<CR>", open_gist)
+                  return true
+                end,
+              })
+              :find()
         end
       end,
     },
@@ -285,7 +285,7 @@ local function checkout_pull_request()
   return function(prompt_bufnr)
     local sel = action_state.get_selected_entry(prompt_bufnr)
     actions.close(prompt_bufnr)
-    utils.checkout_pr(sel.obj.number)
+    utils.checkout_pr(sel.obj)
   end
 end
 
@@ -356,41 +356,41 @@ function M.pull_requests(opts)
           opts.prompt_title = opts.prompt_title or ""
           opts.results_title = opts.results_title or ""
           pickers
-            .new(opts, {
-              finder = finders.new_table {
-                results = pull_requests,
-                entry_maker = entry_maker.gen_from_issue(max_number),
-              },
-              sorter = conf.generic_sorter(opts),
-              previewer = previewers.issue.new(opts),
-              attach_mappings = function(_, map)
-                action_set.select:replace(replace)
-                map("i", cfg.picker_config.mappings.checkout_pr.lhs, checkout_pull_request())
-                map("i", cfg.picker_config.mappings.open_in_browser.lhs, open_in_browser())
-                map("i", cfg.picker_config.mappings.copy_url.lhs, copy_url())
-                map("i", cfg.picker_config.mappings.copy_sha.lhs, function(prompt_bufnr)
-                  local entry = action_state.get_selected_entry(prompt_bufnr)
-                  -- Fetch PR details to get the head SHA
-                  utils.info "Fetching PR details for SHA..."
-                  local owner, repo = entry.obj.repository.nameWithOwner:match "([^/]+)/(.+)"
-                  gh.api.get {
-                    "/repos/{owner}/{repo}/pulls/{pull_number}",
-                    format = { owner = owner, repo = repo, pull_number = entry.obj.number },
-                    opts = {
-                      cb = gh.create_callback {
-                        success = function(output)
-                          local pr_data = vim.json.decode(output)
-                          utils.copy_sha(pr_data.head.sha)
-                        end,
+              .new(opts, {
+                finder = finders.new_table {
+                  results = pull_requests,
+                  entry_maker = entry_maker.gen_from_issue(max_number),
+                },
+                sorter = conf.generic_sorter(opts),
+                previewer = previewers.issue.new(opts),
+                attach_mappings = function(_, map)
+                  action_set.select:replace(replace)
+                  map("i", cfg.picker_config.mappings.checkout_pr.lhs, checkout_pull_request())
+                  map("i", cfg.picker_config.mappings.open_in_browser.lhs, open_in_browser())
+                  map("i", cfg.picker_config.mappings.copy_url.lhs, copy_url())
+                  map("i", cfg.picker_config.mappings.copy_sha.lhs, function(prompt_bufnr)
+                    local entry = action_state.get_selected_entry(prompt_bufnr)
+                    -- Fetch PR details to get the head SHA
+                    utils.info "Fetching PR details for SHA..."
+                    local owner, repo = entry.obj.repository.nameWithOwner:match "([^/]+)/(.+)"
+                    gh.api.get {
+                      "/repos/{owner}/{repo}/pulls/{pull_number}",
+                      format = { owner = owner, repo = repo, pull_number = entry.obj.number },
+                      opts = {
+                        cb = gh.create_callback {
+                          success = function(output)
+                            local pr_data = vim.json.decode(output)
+                            utils.copy_sha(pr_data.head.sha)
+                          end,
+                        },
                       },
-                    },
-                  }
-                end)
-                map("i", cfg.picker_config.mappings.merge_pr.lhs, merge_pull_request())
-                return true
-              end,
-            })
-            :find()
+                    }
+                  end)
+                  map("i", cfg.picker_config.mappings.merge_pr.lhs, merge_pull_request())
+                  return true
+                end,
+              })
+              :find()
         end
       end,
     },
@@ -413,25 +413,25 @@ function M.commits(opts)
         success = function(output)
           local results = vim.json.decode(output)
           pickers
-            .new({}, {
-              prompt_title = false,
-              results_title = false,
-              preview_title = false,
-              finder = finders.new_table {
-                results = results,
-                entry_maker = entry_maker.gen_from_git_commits(),
-              },
-              sorter = conf.generic_sorter {},
-              previewer = previewers.commit.new { repo = opts.repo },
-              attach_mappings = function(_, map)
-                action_set.select:replace(function(prompt_bufnr, type)
-                  open_preview_buffer(type)(prompt_bufnr)
-                end)
-                map("i", octo_config.values.picker_config.mappings.copy_sha.lhs, copy_sha())
-                return true
-              end,
-            })
-            :find()
+              .new({}, {
+                prompt_title = false,
+                results_title = false,
+                preview_title = false,
+                finder = finders.new_table {
+                  results = results,
+                  entry_maker = entry_maker.gen_from_git_commits(),
+                },
+                sorter = conf.generic_sorter {},
+                previewer = previewers.commit.new { repo = opts.repo },
+                attach_mappings = function(_, map)
+                  action_set.select:replace(function(prompt_bufnr, type)
+                    open_preview_buffer(type)(prompt_bufnr)
+                  end)
+                  map("i", octo_config.values.picker_config.mappings.copy_sha.lhs, copy_sha())
+                  return true
+                end,
+              })
+              :find()
         end,
       },
     },
@@ -470,29 +470,29 @@ function M.review_commits(current_review, callback)
           })
 
           pickers
-            .new({}, {
-              prompt_title = false,
-              results_title = false,
-              preview_title = false,
-              finder = finders.new_table {
-                results = results,
-                entry_maker = entry_maker.gen_from_git_commits(),
-              },
-              sorter = conf.generic_sorter {},
-              previewer = previewers.commit.new { repo = current_review.pull_request.repo },
-              attach_mappings = function(_, map)
-                action_set.select:replace(function(prompt_bufnr)
-                  local commit = action_state.get_selected_entry(prompt_bufnr)
-                  local right = commit.value
-                  local left = commit.parent
-                  actions.close(prompt_bufnr)
-                  callback(right, left)
-                end)
-                map("i", octo_config.values.picker_config.mappings.copy_sha.lhs, copy_sha())
-                return true
-              end,
-            })
-            :find()
+              .new({}, {
+                prompt_title = false,
+                results_title = false,
+                preview_title = false,
+                finder = finders.new_table {
+                  results = results,
+                  entry_maker = entry_maker.gen_from_git_commits(),
+                },
+                sorter = conf.generic_sorter {},
+                previewer = previewers.commit.new { repo = current_review.pull_request.repo },
+                attach_mappings = function(_, map)
+                  action_set.select:replace(function(prompt_bufnr)
+                    local commit = action_state.get_selected_entry(prompt_bufnr)
+                    local right = commit.value
+                    local left = commit.parent
+                    actions.close(prompt_bufnr)
+                    callback(right, left)
+                  end)
+                  map("i", octo_config.values.picker_config.mappings.copy_sha.lhs, copy_sha())
+                  return true
+                end,
+              })
+              :find()
         end,
       },
     },
@@ -526,27 +526,27 @@ function M.changed_files(opts)
           end
 
           pickers
-            .new({}, {
-              prompt_title = false,
-              results_title = false,
-              preview_title = false,
-              finder = finders.new_table {
-                results = results,
-                entry_maker = entry_maker.gen_from_git_changed_files {
-                  max_additions = max_additions,
-                  max_deletions = max_deletions,
+              .new({}, {
+                prompt_title = false,
+                results_title = false,
+                preview_title = false,
+                finder = finders.new_table {
+                  results = results,
+                  entry_maker = entry_maker.gen_from_git_changed_files {
+                    max_additions = max_additions,
+                    max_deletions = max_deletions,
+                  },
                 },
-              },
-              sorter = conf.generic_sorter {},
-              previewer = previewers.changed_files.new { repo = opts.repo, number = opts.number },
-              attach_mappings = function()
-                action_set.select:replace(function(prompt_bufnr, type)
-                  open_preview_buffer(type)(prompt_bufnr)
-                end)
-                return true
-              end,
-            })
-            :find()
+                sorter = conf.generic_sorter {},
+                previewer = previewers.changed_files.new { repo = opts.repo, number = opts.number },
+                attach_mappings = function()
+                  action_set.select:replace(function(prompt_bufnr, type)
+                    open_preview_buffer(type)(prompt_bufnr)
+                  end)
+                  return true
+                end,
+              })
+              :find()
         end,
       },
     },
@@ -601,19 +601,19 @@ local function create_repo_picker(repos, opts, max)
   end
 
   pickers
-    .new(opts, {
-      finder = finder,
-      sorter = conf.generic_sorter(opts),
-      attach_mappings = function(_, map)
-        action_set.select:replace(function(prompt_bufnr, type)
-          open(type)(prompt_bufnr)
-        end)
-        map("i", cfg.picker_config.mappings.open_in_browser.lhs, open_in_browser())
-        map("i", cfg.picker_config.mappings.copy_url.lhs, copy_url())
-        return true
-      end,
-    })
-    :find()
+      .new(opts, {
+        finder = finder,
+        sorter = conf.generic_sorter(opts),
+        attach_mappings = function(_, map)
+          action_set.select:replace(function(prompt_bufnr, type)
+            open(type)(prompt_bufnr)
+          end)
+          map("i", cfg.picker_config.mappings.open_in_browser.lhs, open_in_browser())
+          map("i", cfg.picker_config.mappings.copy_url.lhs, copy_url())
+          return true
+        end,
+      })
+      :find()
 end
 
 local function repo_search(opts)
@@ -665,10 +665,10 @@ function M.search(opts)
           return entry_maker.gen_from_issue(width, true)
         end,
       }
-    or {
-      previewer = previewers.discussion,
-      entry_maker = entry_maker.gen_from_discussion,
-    }
+      or {
+        previewer = previewers.discussion,
+        entry_maker = entry_maker.gen_from_discussion,
+      }
 
   local cfg = octo_config.values
   if type(opts.prompt) == "string" then
@@ -722,44 +722,44 @@ function M.search(opts)
   opts.prompt_title = opts.prompt_title or ""
   opts.results_title = opts.results_title or ""
   pickers
-    .new(opts, {
-      finder = finder,
-      sorter = conf.generic_sorter(opts),
-      previewer = settings.previewer.new(opts),
-      attach_mappings = function(_, map)
-        action_set.select:replace(replace)
-        map("i", cfg.picker_config.mappings.open_in_browser.lhs, open_in_browser())
-        map("i", cfg.picker_config.mappings.copy_url.lhs, copy_url())
-        map("i", cfg.picker_config.mappings.copy_sha.lhs, function(prompt_bufnr)
-          local entry = action_state.get_selected_entry(prompt_bufnr)
-          if entry.obj.__typename == "PullRequest" then
-            -- Fetch PR details to get the head SHA
-            utils.info "Fetching PR details for SHA..."
-            local owner, repo = entry.obj.repository.nameWithOwner:match "([^/]+)/(.+)"
-            gh.api.get {
-              "/repos/{owner}/{repo}/pulls/{pull_number}",
-              format = { owner = owner, repo = repo, pull_number = entry.obj.number },
-              opts = {
-                cb = gh.create_callback {
-                  success = function(output)
-                    local pr_data = vim.json.decode(output)
-                    utils.copy_sha(pr_data.head.sha)
-                  end,
+      .new(opts, {
+        finder = finder,
+        sorter = conf.generic_sorter(opts),
+        previewer = settings.previewer.new(opts),
+        attach_mappings = function(_, map)
+          action_set.select:replace(replace)
+          map("i", cfg.picker_config.mappings.open_in_browser.lhs, open_in_browser())
+          map("i", cfg.picker_config.mappings.copy_url.lhs, copy_url())
+          map("i", cfg.picker_config.mappings.copy_sha.lhs, function(prompt_bufnr)
+            local entry = action_state.get_selected_entry(prompt_bufnr)
+            if entry.obj.__typename == "PullRequest" then
+              -- Fetch PR details to get the head SHA
+              utils.info "Fetching PR details for SHA..."
+              local owner, repo = entry.obj.repository.nameWithOwner:match "([^/]+)/(.+)"
+              gh.api.get {
+                "/repos/{owner}/{repo}/pulls/{pull_number}",
+                format = { owner = owner, repo = repo, pull_number = entry.obj.number },
+                opts = {
+                  cb = gh.create_callback {
+                    success = function(output)
+                      local pr_data = vim.json.decode(output)
+                      utils.copy_sha(pr_data.head.sha)
+                    end,
+                  },
                 },
-              },
-            }
-          else
-            utils.info "Copy SHA not available for this item type"
+              }
+            else
+              utils.info "Copy SHA not available for this item type"
+            end
+          end)
+          if opts.search_prs then
+            map("i", cfg.picker_config.mappings.checkout_pr.lhs, checkout_pull_request())
+            map("i", cfg.picker_config.mappings.merge_pr.lhs, merge_pull_request())
           end
-        end)
-        if opts.search_prs then
-          map("i", cfg.picker_config.mappings.checkout_pr.lhs, checkout_pull_request())
-          map("i", cfg.picker_config.mappings.merge_pr.lhs, merge_pull_request())
-        end
-        return true
-      end,
-    })
-    :find()
+          return true
+        end,
+      })
+      :find()
 end
 
 ---
@@ -772,70 +772,70 @@ function M.pending_threads(threads)
     max_linenr_length = math.max(max_linenr_length, #tostring(thread.line))
   end
   pickers
-    .new({}, {
-      prompt_title = false,
-      results_title = false,
-      preview_title = false,
-      finder = finders.new_table {
-        results = threads,
-        entry_maker = entry_maker.gen_from_review_thread(max_linenr_length),
-      },
-      sorter = conf.generic_sorter {},
-      previewer = previewers.review_thread.new {},
-      attach_mappings = function()
-        actions.select_default:replace(function(prompt_bufnr)
-          local thread = action_state.get_selected_entry(prompt_bufnr).thread
-          actions.close(prompt_bufnr)
-          reviews.jump_to_pending_review_thread(thread)
-        end)
-        return true
-      end,
-    })
-    :find()
+      .new({}, {
+        prompt_title = false,
+        results_title = false,
+        preview_title = false,
+        finder = finders.new_table {
+          results = threads,
+          entry_maker = entry_maker.gen_from_review_thread(max_linenr_length),
+        },
+        sorter = conf.generic_sorter {},
+        previewer = previewers.review_thread.new {},
+        attach_mappings = function()
+          actions.select_default:replace(function(prompt_bufnr)
+            local thread = action_state.get_selected_entry(prompt_bufnr).thread
+            actions.close(prompt_bufnr)
+            reviews.jump_to_pending_review_thread(thread)
+          end)
+          return true
+        end,
+      })
+      :find()
 end
 
 function M.workflow_runs(workflow_runs, title, on_select_cb)
   pickers
-    .new({}, {
-      prompt_title = title or false,
-      results_title = false,
-      preview_title = false,
-      finder = finders.new_table {
-        results = workflow_runs,
-        entry_maker = entry_maker.gen_from_workflow_run(),
-      },
-      sorter = conf.generic_sorter {},
-      previewer = previewers.workflow_runs.new {},
-      attach_mappings = function(_, map)
-        actions.select_default:replace(function(prompt_bufnr)
-          local selection = action_state.get_selected_entry(prompt_bufnr)
-          actions.close(prompt_bufnr)
-          on_select_cb(selection.value)
-        end)
-        local mappings = require("octo.config").values.mappings.runs
+      .new({}, {
+        prompt_title = title or false,
+        results_title = false,
+        preview_title = false,
+        finder = finders.new_table {
+          results = workflow_runs,
+          entry_maker = entry_maker.gen_from_workflow_run(),
+        },
+        sorter = conf.generic_sorter {},
+        previewer = previewers.workflow_runs.new {},
+        attach_mappings = function(_, map)
+          actions.select_default:replace(function(prompt_bufnr)
+            local selection = action_state.get_selected_entry(prompt_bufnr)
+            actions.close(prompt_bufnr)
+            on_select_cb(selection.value)
+          end)
+          local mappings = require("octo.config").values.mappings.runs
 
-        map("i", mappings.rerun.lhs, function(prompt_bufnr)
-          local selection = action_state.get_selected_entry(prompt_bufnr)
-          local id = selection.value.id
-          require("octo.workflow_runs").rerun { db_id = id }
-        end)
+          map("i", mappings.rerun.lhs, function(prompt_bufnr)
+            local selection = action_state.get_selected_entry(prompt_bufnr)
+            local id = selection.value.id
+            require("octo.workflow_runs").rerun { db_id = id }
+          end)
 
-        map("i", mappings.rerun_failed.lhs, function(prompt_bufnr)
-          local selection = action_state.get_selected_entry(prompt_bufnr)
-          local id = selection.value.id
-          require("octo.workflow_runs").rerun { db_id = id, failed = true }
-        end)
+          map("i", mappings.rerun_failed.lhs, function(prompt_bufnr)
+            local selection = action_state.get_selected_entry(prompt_bufnr)
+            local id = selection.value.id
+            require("octo.workflow_runs").rerun { db_id = id, failed = true }
+          end)
 
-        map("i", mappings.cancel.lhs, function(prompt_bufnr)
-          local selection = action_state.get_selected_entry(prompt_bufnr)
-          local id = selection.value.id
-          require("octo.workflow_runs").cancel(id)
-          actions.close(prompt_bufnr)
-        end)
-        return true
-      end,
-    })
-    :find()
+          map("i", mappings.cancel.lhs, function(prompt_bufnr)
+            local selection = action_state.get_selected_entry(prompt_bufnr)
+            local id = selection.value.id
+            require("octo.workflow_runs").cancel(id)
+            actions.close(prompt_bufnr)
+          end)
+          return true
+        end,
+      })
+      :find()
 end
 
 ---
@@ -891,27 +891,27 @@ function M.select_label(opts)
     local labels = vim.json.decode(output)
 
     pickers
-      .new(opts, {
-        finder = finders.new_table {
-          results = labels,
-          entry_maker = entry_maker.gen_from_label(),
-        },
-        sorter = conf.generic_sorter(opts),
-        attach_mappings = function(_, _)
-          actions.select_default:replace(function(prompt_bufnr)
-            select {
-              bufnr = prompt_bufnr,
-              single_cb = cb,
-              multiple_cb = cb,
-              get_item = function(selection)
-                return selection.label
-              end,
-            }
-          end)
-          return true
-        end,
-      })
-      :find()
+        .new(opts, {
+          finder = finders.new_table {
+            results = labels,
+            entry_maker = entry_maker.gen_from_label(),
+          },
+          sorter = conf.generic_sorter(opts),
+          attach_mappings = function(_, _)
+            actions.select_default:replace(function(prompt_bufnr)
+              select {
+                bufnr = prompt_bufnr,
+                single_cb = cb,
+                multiple_cb = cb,
+                get_item = function(selection)
+                  return selection.label
+                end,
+              }
+            end)
+            return true
+          end,
+        })
+        :find()
   end
 
   gh.api.graphql {
@@ -953,27 +953,27 @@ function M.select_assigned_label(opts)
     local labels = vim.json.decode(output)
 
     pickers
-      .new(opts, {
-        finder = finders.new_table {
-          results = labels,
-          entry_maker = entry_maker.gen_from_label(),
-        },
-        sorter = conf.generic_sorter(opts),
-        attach_mappings = function(_, _)
-          actions.select_default:replace(function(prompt_bufnr)
-            select {
-              bufnr = prompt_bufnr,
-              single_cb = cb,
-              multiple_cb = cb,
-              get_item = function(selection)
-                return selection.label
-              end,
-            }
-          end)
-          return true
-        end,
-      })
-      :find()
+        .new(opts, {
+          finder = finders.new_table {
+            results = labels,
+            entry_maker = entry_maker.gen_from_label(),
+          },
+          sorter = conf.generic_sorter(opts),
+          attach_mappings = function(_, _)
+            actions.select_default:replace(function(prompt_bufnr)
+              select {
+                bufnr = prompt_bufnr,
+                single_cb = cb,
+                multiple_cb = cb,
+                get_item = function(selection)
+                  return selection.label
+                end,
+              }
+            end)
+            return true
+          end,
+        })
+        :find()
   end
 
   gh.api.graphql {
@@ -1110,47 +1110,47 @@ function M.select_user(cb)
   local finder = create_user_finder()
 
   pickers
-    .new(opts, {
-      finder = finder,
-      sorter = sorters.get_fuzzy_file(opts),
-      attach_mappings = function()
-        actions.select_default:replace(function(prompt_bufnr)
-          local selected_user = action_state.get_selected_entry(prompt_bufnr)
-          actions._close(prompt_bufnr, true)
-          if not selected_user or not selected_user.user then
-            return
-          end
-          if not selected_user.user.teams then
-            -- user
-            cb(selected_user.user.id)
-          else
-            -- organization, pick a team
-            pickers
-              .new(opts, {
-                prompt_title = false,
-                results_title = false,
-                preview_title = false,
-                finder = finders.new_table {
-                  results = selected_user.user.teams,
-                  entry_maker = entry_maker.gen_from_team(),
-                },
-                sorter = conf.generic_sorter(opts),
-                attach_mappings = function()
-                  actions.select_default:replace(function(prompt_bufnr)
-                    local selected_team = action_state.get_selected_entry(prompt_bufnr)
-                    actions.close(prompt_bufnr)
-                    cb(selected_team.team.id)
-                  end)
-                  return true
-                end,
-              })
-              :find()
-          end
-        end)
-        return true
-      end,
-    })
-    :find()
+      .new(opts, {
+        finder = finder,
+        sorter = sorters.get_fuzzy_file(opts),
+        attach_mappings = function()
+          actions.select_default:replace(function(prompt_bufnr)
+            local selected_user = action_state.get_selected_entry(prompt_bufnr)
+            actions._close(prompt_bufnr, true)
+            if not selected_user or not selected_user.user then
+              return
+            end
+            if not selected_user.user.teams then
+              -- user
+              cb(selected_user.user.id)
+            else
+              -- organization, pick a team
+              pickers
+                  .new(opts, {
+                    prompt_title = false,
+                    results_title = false,
+                    preview_title = false,
+                    finder = finders.new_table {
+                      results = selected_user.user.teams,
+                      entry_maker = entry_maker.gen_from_team(),
+                    },
+                    sorter = conf.generic_sorter(opts),
+                    attach_mappings = function()
+                      actions.select_default:replace(function(prompt_bufnr)
+                        local selected_team = action_state.get_selected_entry(prompt_bufnr)
+                        actions.close(prompt_bufnr)
+                        cb(selected_team.team.id)
+                      end)
+                      return true
+                    end,
+                  })
+                  :find()
+            end
+          end)
+          return true
+        end,
+      })
+      :find()
 end
 
 --
@@ -1184,22 +1184,22 @@ function M.select_assignee(cb)
           local resp = vim.json.decode(output)
           local assignees = resp.data.repository[key].assignees.nodes
           pickers
-            .new(opts, {
-              finder = finders.new_table {
-                results = assignees,
-                entry_maker = entry_maker.gen_from_user(),
-              },
-              sorter = conf.generic_sorter(opts),
-              attach_mappings = function(_, _)
-                actions.select_default:replace(function(prompt_bufnr)
-                  local selected_assignee = action_state.get_selected_entry(prompt_bufnr)
-                  actions.close(prompt_bufnr)
-                  cb(selected_assignee.user.id)
-                end)
-                return true
-              end,
-            })
-            :find()
+              .new(opts, {
+                finder = finders.new_table {
+                  results = assignees,
+                  entry_maker = entry_maker.gen_from_user(),
+                },
+                sorter = conf.generic_sorter(opts),
+                attach_mappings = function(_, _)
+                  actions.select_default:replace(function(prompt_bufnr)
+                    local selected_assignee = action_state.get_selected_entry(prompt_bufnr)
+                    actions.close(prompt_bufnr)
+                    cb(selected_assignee.user.id)
+                  end)
+                  return true
+                end,
+              })
+              :find()
         end
       end,
     },
@@ -1271,22 +1271,22 @@ function M.actions(flattened_actions)
   width = width + 1
 
   pickers
-    .new(opts, {
-      finder = finders.new_table {
-        results = flattened_actions,
-        entry_maker = entry_maker.gen_from_octo_actions(width),
-      },
-      sorter = conf.generic_sorter(opts),
-      attach_mappings = function()
-        actions.select_default:replace(function(prompt_bufnr)
-          local selected_command = action_state.get_selected_entry(prompt_bufnr)
-          actions.close(prompt_bufnr)
-          selected_command.action.fun()
-        end)
-        return true
-      end,
-    })
-    :find()
+      .new(opts, {
+        finder = finders.new_table {
+          results = flattened_actions,
+          entry_maker = entry_maker.gen_from_octo_actions(width),
+        },
+        sorter = conf.generic_sorter(opts),
+        attach_mappings = function()
+          actions.select_default:replace(function(prompt_bufnr)
+            local selected_command = action_state.get_selected_entry(prompt_bufnr)
+            actions.close(prompt_bufnr)
+            selected_command.action.fun()
+          end)
+          return true
+        end,
+      })
+      :find()
 end
 
 --
@@ -1362,51 +1362,51 @@ function M.notifications(opts)
     end
 
     pickers
-      .new(opts, {
-        finder = finders.new_table {
-          results = resp,
-          entry_maker = entry_maker.gen_from_notification {
-            show_repo_info = not opts.repo,
+        .new(opts, {
+          finder = finders.new_table {
+            results = resp,
+            entry_maker = entry_maker.gen_from_notification {
+              show_repo_info = not opts.repo,
+            },
           },
-        },
-        sorter = conf.generic_sorter(opts),
-        previewer = previewers.notification.new(opts),
-        attach_mappings = function(_, map)
-          action_set.select:replace(function(prompt_bufnr, type)
-            open(type)(prompt_bufnr)
-          end)
-          map("i", cfg.picker_config.mappings.open_in_browser.lhs, open_in_browser())
-          map("i", cfg.picker_config.mappings.copy_url.lhs, copy_notification_url)
-          map("i", cfg.picker_config.mappings.copy_sha.lhs, function(prompt_bufnr)
-            local entry = action_state.get_selected_entry(prompt_bufnr)
-            if entry.obj.subject.type == "PullRequest" then
-              -- Fetch PR details to get the head SHA
-              utils.info "Fetching PR details for SHA..."
-              local owner, repo = entry.obj.repository.full_name:match "([^/]+)/(.+)"
-              local number = entry.obj.subject.url:match "%d+$"
-              gh.api.get {
-                "/repos/{owner}/{repo}/pulls/{pull_number}",
-                format = { owner = owner, repo = repo, pull_number = number },
-                opts = {
-                  cb = gh.create_callback {
-                    success = function(output)
-                      local pr_data = vim.json.decode(output)
-                      utils.copy_sha(pr_data.head.sha)
-                    end,
+          sorter = conf.generic_sorter(opts),
+          previewer = previewers.notification.new(opts),
+          attach_mappings = function(_, map)
+            action_set.select:replace(function(prompt_bufnr, type)
+              open(type)(prompt_bufnr)
+            end)
+            map("i", cfg.picker_config.mappings.open_in_browser.lhs, open_in_browser())
+            map("i", cfg.picker_config.mappings.copy_url.lhs, copy_notification_url)
+            map("i", cfg.picker_config.mappings.copy_sha.lhs, function(prompt_bufnr)
+              local entry = action_state.get_selected_entry(prompt_bufnr)
+              if entry.obj.subject.type == "PullRequest" then
+                -- Fetch PR details to get the head SHA
+                utils.info "Fetching PR details for SHA..."
+                local owner, repo = entry.obj.repository.full_name:match "([^/]+)/(.+)"
+                local number = entry.obj.subject.url:match "%d+$"
+                gh.api.get {
+                  "/repos/{owner}/{repo}/pulls/{pull_number}",
+                  format = { owner = owner, repo = repo, pull_number = number },
+                  opts = {
+                    cb = gh.create_callback {
+                      success = function(output)
+                        local pr_data = vim.json.decode(output)
+                        utils.copy_sha(pr_data.head.sha)
+                      end,
+                    },
                   },
-                },
-              }
-            else
-              utils.info "Copy SHA not available for this notification type"
-            end
-          end)
-          map("i", cfg.mappings.notification.read.lhs, mark_notification_read())
-          map("i", cfg.mappings.notification.done.lhs, mark_notification_done())
-          map("i", cfg.mappings.notification.unsubscribe.lhs, unsubscribe_notification())
-          return true
-        end,
-      })
-      :find()
+                }
+              else
+                utils.info "Copy SHA not available for this notification type"
+              end
+            end)
+            map("i", cfg.mappings.notification.read.lhs, mark_notification_read())
+            map("i", cfg.mappings.notification.done.lhs, mark_notification_done())
+            map("i", cfg.mappings.notification.unsubscribe.lhs, unsubscribe_notification())
+            return true
+          end,
+        })
+        :find()
   end
 
   gh.api.get {
@@ -1434,23 +1434,23 @@ function M.issue_templates(templates, cb)
   }
 
   pickers
-    .new(opts, {
-      finder = finders.new_table {
-        results = templates,
-        entry_maker = entry_maker.gen_from_issue_templates(),
-      },
-      sorter = conf.generic_sorter(opts),
-      previewer = previewers.issue_template.new {},
-      attach_mappings = function()
-        actions.select_default:replace(function(prompt_bufnr)
-          local selected_template = action_state.get_selected_entry(prompt_bufnr)
-          actions.close(prompt_bufnr)
-          cb(selected_template.template)
-        end)
-        return true
-      end,
-    })
-    :find()
+      .new(opts, {
+        finder = finders.new_table {
+          results = templates,
+          entry_maker = entry_maker.gen_from_issue_templates(),
+        },
+        sorter = conf.generic_sorter(opts),
+        previewer = previewers.issue_template.new {},
+        attach_mappings = function()
+          actions.select_default:replace(function(prompt_bufnr)
+            local selected_template = action_state.get_selected_entry(prompt_bufnr)
+            actions.close(prompt_bufnr)
+            cb(selected_template.template)
+          end)
+          return true
+        end,
+      })
+      :find()
 end
 
 ---@param opts { repo: string, cb: function }
@@ -1481,20 +1481,20 @@ function M.discussions(opts)
     opts.preview_title = opts.preview_title or ""
 
     pickers
-      .new(opts, {
-        finder = finders.new_table {
-          results = discussions,
-          entry_maker = entry_maker.gen_from_discussion(max_number),
-        },
-        sorter = conf.generic_sorter(opts),
-        previewer = previewers.discussion.new(opts),
-        attach_mappings = function(_, map)
-          action_set.select:replace(replace)
-          map("i", cfg.picker_config.mappings.copy_url.lhs, copy_url())
-          return true
-        end,
-      })
-      :find()
+        .new(opts, {
+          finder = finders.new_table {
+            results = discussions,
+            entry_maker = entry_maker.gen_from_discussion(max_number),
+          },
+          sorter = conf.generic_sorter(opts),
+          previewer = previewers.discussion.new(opts),
+          attach_mappings = function(_, map)
+            action_set.select:replace(replace)
+            map("i", cfg.picker_config.mappings.copy_url.lhs, copy_url())
+            return true
+          end,
+        })
+        :find()
   end
 
   local owner, name = utils.split_repo(opts.repo)
@@ -1568,29 +1568,29 @@ function M.milestones(opts)
         end
 
         pickers
-          .new(vim.deepcopy(dropdown_opts), {
-            finder = finders.new_table {
-              results = nodes,
-              entry_maker = entry_maker.gen_from_milestone(title_width, non_empty_descriptions),
-            },
-            sorter = conf.generic_sorter(opts),
-            attach_mappings = function(_, _map)
-              actions.select_default:replace(function(prompt_bufnr)
-                select {
-                  bufnr = prompt_bufnr,
-                  single_cb = function(selected)
-                    opts.cb(selected[1])
-                  end,
-                  multiple_cb = nil,
-                  get_item = function(selected)
-                    return selected.milestone
-                  end,
-                }
-              end)
-              return true
-            end,
-          })
-          :find()
+            .new(vim.deepcopy(dropdown_opts), {
+              finder = finders.new_table {
+                results = nodes,
+                entry_maker = entry_maker.gen_from_milestone(title_width, non_empty_descriptions),
+              },
+              sorter = conf.generic_sorter(opts),
+              attach_mappings = function(_, _map)
+                actions.select_default:replace(function(prompt_bufnr)
+                  select {
+                    bufnr = prompt_bufnr,
+                    single_cb = function(selected)
+                      opts.cb(selected[1])
+                    end,
+                    multiple_cb = nil,
+                    get_item = function(selected)
+                      return selected.milestone
+                    end,
+                  }
+                end)
+                return true
+              end,
+            })
+            :find()
       end,
     },
   }
@@ -1620,38 +1620,38 @@ function M.project_columns_v2(cb)
 
         local opts = {}
         pickers
-          .new(vim.deepcopy(dropdown_opts), {
-            finder = finders.new_table {
-              results = results,
-              entry_maker = entry_maker.gen_from_project_v2(),
-            },
-            sorter = conf.generic_sorter(opts),
-            attach_mappings = function(_, _map)
-              actions.select_default:replace(function(prompt_bufnr)
-                select {
-                  bufnr = prompt_bufnr,
-                  single_cb = function(selected)
-                    selected = selected[1]
+            .new(vim.deepcopy(dropdown_opts), {
+              finder = finders.new_table {
+                results = results,
+                entry_maker = entry_maker.gen_from_project_v2(),
+              },
+              sorter = conf.generic_sorter(opts),
+              attach_mappings = function(_, _map)
+                actions.select_default:replace(function(prompt_bufnr)
+                  select {
+                    bufnr = prompt_bufnr,
+                    single_cb = function(selected)
+                      selected = selected[1]
 
-                    vim.ui.select(selected.columns.options, {
-                      prompt = "Select a field value: ",
-                      format_item = function(item)
-                        return item.name
-                      end,
-                    }, function(value)
-                      cb(selected.id, selected.columns.id, value.id)
-                    end)
-                  end,
-                  multiple_cb = nil,
-                  get_item = function(selected)
-                    return selected.project
-                  end,
-                }
-              end)
-              return true
-            end,
-          })
-          :find()
+                      vim.ui.select(selected.columns.options, {
+                        prompt = "Select a field value: ",
+                        format_item = function(item)
+                          return item.name
+                        end,
+                      }, function(value)
+                        cb(selected.id, selected.columns.id, value.id)
+                      end)
+                    end,
+                    multiple_cb = nil,
+                    get_item = function(selected)
+                      return selected.project
+                    end,
+                  }
+                end)
+                return true
+              end,
+            })
+            :find()
       end,
     },
   }

@@ -268,7 +268,7 @@ function M.parse_git_remote()
   ---@type table<string, OctoRepo>
   local remotes = {}
   for _, line in
-    ipairs(job:result() --[[@as string[] ]])
+  ipairs(job:result() --[[@as string[] ]])
   do
     local name, url = line:match "^(%S+)%s+(%S+)"
     if name then
@@ -588,16 +588,44 @@ function M.in_pr_branch(pr)
   return M.in_pr_branch_locally_tracked(pr) or M.in_pr_branch_config_tracked(pr)
 end
 
----@param pr_number integer
-function M.checkout_pr(pr_number)
-  gh.pr.checkout {
-    pr_number,
-    opts = {
-      cb = gh.create_callback {
-        success = branch_switch_message,
+local git = require "git-worktree.git"
+local function is_bare_checkout()
+  local root = git.gitroot_dir()
+  local top = git.toplevel_dir()
+
+  if top then
+    local sub = root.gsub(root, top, "")
+    local fd = string.find(sub, "/.git$")
+    return fd == nil
+  end
+
+  return false
+end
+
+local git_worktree = require "git-worktree.worktree"
+---@param pr integer | octo.PullRequest
+function M.checkout_pr(pr)
+  if pr.headRefName and is_bare_checkout() then
+    local branch_name = pr.headRefName
+    local worktree_path = git.gitroot_dir() .. "/" .. branch_name
+    git.has_worktree(worktree_path, branch_name, function(cb)
+      if cb then
+        print "Switching to existing worktree"
+        git_worktree.switch(worktree_path)
+      else
+        git_worktree.create(worktree_path, branch_name, branch_name)
+      end
+    end)
+  else
+    gh.pr.checkout {
+      pr.number or pr,
+      opts = {
+        cb = gh.create_callback {
+          success = branch_switch_message,
+        },
       },
-    },
-  }
+    }
+  end
 end
 
 ---@class CheckoutPrSyncOpts
@@ -751,9 +779,9 @@ function M.relative_date(opts, reference)
   end
 
   local delta = (opts.minutes or 0) * 60
-    + (opts.hours or 0) * 3600
-    + (opts.days or 0) * 86400
-    + (opts.weeks or 0) * 604800
+      + (opts.hours or 0) * 3600
+      + (opts.days or 0) * 86400
+      + (opts.weeks or 0) * 604800
   local new_ts = ref_ts - delta
 
   return os.date("!%Y-%m-%dT%H:%M:%SZ", new_ts)
@@ -1549,7 +1577,7 @@ function M.process_patch(patch)
     local header = vim.split(hunk, "\n")[1]
     ---@type integer?, integer?, integer, integer, integer, integer
     local found, _, left_start, left_length, right_start, right_length =
-      string.find(header, "^%s*%-(%d+),(%d+)%s+%+(%d+),(%d+)%s*@@")
+        string.find(header, "^%s*%-(%d+),(%d+)%s+%+(%d+),(%d+)%s*@@")
     if found then
       table.insert(hunks, hunk)
       table.insert(left_ranges, { tonumber(left_start), math.max(left_start + left_length - 1, 0) })
@@ -1880,10 +1908,10 @@ function M.apply_mappings(kind, bufnr)
   local conf = config.values
   for action, value in pairs(conf.mappings[kind]) do
     if
-      not M.is_blank(value)
-      and not M.is_blank(action)
-      and not M.is_blank(value.lhs)
-      and not M.is_blank(mappings[action])
+        not M.is_blank(value)
+        and not M.is_blank(action)
+        and not M.is_blank(value.lhs)
+        and not M.is_blank(mappings[action])
     then
       if M.is_blank(value.desc) then
         value.desc = ""
